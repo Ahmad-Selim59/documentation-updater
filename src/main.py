@@ -28,7 +28,7 @@ except Exception as e:
 
 
 async def claude_agent_processor(doc: str) -> None:
-    prompt += f"""{SYSTEM_PROMPT}
+    prompt = f"""{SYSTEM_PROMPT}
 
 Here is the documentation file that you need to analyze:
 <documentation>
@@ -61,6 +61,7 @@ async def process_documentation() -> None:
 
 def clone_repo() -> None:
     global FOLDER
+    global SYSTEM_PROMPT
 
     repo_name = GITHUB_URI.rstrip("/").split("/")[-1]
     if repo_name.endswith(".git"):
@@ -85,7 +86,57 @@ def open_pr():
     """
     open a pull request with the doc changes
     """
-    now = datetime.now()
+    now = datetime.datetime.now()
+    branch_name = f"docu-jarvis{now.day:02d}{now.month:02d}{now.year}{now.hour:02d}{now.minute:02d}"
+
+    try:
+        os.chdir(FOLDER)
+
+        subprocess.run(["git", "config", "user.name", "Docu Jarvis"], check=True)
+        subprocess.run(
+            ["git", "config", "user.email", "docu-jarvis@automation.local"], check=True
+        )
+        subprocess.run(["git", "checkout", "-b", branch_name], check=True)
+        subprocess.run(["git", "add", DOCUMENTATION_FOLDER + "/"], check=True)
+        result = subprocess.run(
+            ["git", "diff", "--cached", "--quiet"], capture_output=True
+        )
+        if result.returncode == 0:
+            print("No changes to commit in documentation directory")
+            return
+        commit_message = "docs: automated documentation improvements by docu-jarvis"
+        subprocess.run(["git", "commit", "-m", commit_message], check=True)
+        print(f"Pushing branch: {branch_name}")
+        subprocess.run(["git", "push", "origin", branch_name], check=True)
+
+        pr_title = "Documentation Update"
+        pr_description = "Automated docu-jarvis suggestions"
+
+        subprocess.run(
+            [
+                "gh",
+                "pr",
+                "create",
+                "--title",
+                pr_title,
+                "--body",
+                pr_description,
+                "--head",
+                branch_name,
+                "--base",
+                "main",
+            ],
+            check=True,
+        )
+
+        print(f"Successfully created PR with branch: {branch_name}")
+
+    except subprocess.CalledProcessError as e:
+        raise (f"Error creating PR: {e}")
+    except Exception as e:
+        raise (f"Unexpected error: {e}")
+    finally:
+        os.chdir(project_root)
 
 
 async def main() -> None:
