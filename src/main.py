@@ -132,9 +132,9 @@ def open_pr():
         print(f"Successfully created PR with branch: {branch_name}")
 
     except subprocess.CalledProcessError as e:
-        raise (f"Error creating PR: {e}")
+        raise Exception(f"Error creating PR: {e}")
     except Exception as e:
-        raise (f"Unexpected error: {e}")
+        raise Exception(f"Unexpected error: {e}")
     finally:
         os.chdir(project_root)
 
