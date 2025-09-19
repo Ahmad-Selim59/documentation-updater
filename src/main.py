@@ -75,7 +75,7 @@ def clone_repo() -> None:
     subprocess.run(["git", "clone", GITHUB_URI, FOLDER], check=True)
     print("repo cloned successfully")
     SYSTEM_PROMPT += f"""
-Here is the codebase path where you should look for the relevant code files:
+\nHere is the codebase path where you should look for the relevant code files:
 <codebase_path>
 {FOLDER}
 </codebase_path>
