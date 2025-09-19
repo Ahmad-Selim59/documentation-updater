@@ -1,16 +1,52 @@
+import asyncio
 import os
 import subprocess
+from pathlib import Path
+
+from claude_code_sdk import ClaudeCodeOptions, query
 
 from config.env_vars import DOCUMENTATION_FOLDER, GITHUB_URI
 
 FOLDER = ""
 
+CLAUDE_OPTIONS = ""
 
-def claude_agent_processor(doc: str) -> None:
-    pass
+project_root = Path(__file__).resolve().parent.parent
+prompt_file = project_root / "src" / "system_prompts" / "document_updater.txt"
+
+try:
+    with open(prompt_file, "r", encoding="utf-8") as f:
+        SYSTEM_PROMPT = f.read()
+    print(f"Successfully loaded system prompt from {prompt_file}")
+except FileNotFoundError as e:
+    raise FileNotFoundError(
+        f"Critical error: System prompt file not found at {prompt_file}"
+    )
+except Exception as e:
+    raise Exception(f"Critical error reading system prompt file: {e}")
 
 
-def process_documentation() -> None:
+async def claude_agent_processor(doc: str) -> None:
+    prompt = f"""{SYSTEM_PROMPT}
+
+Here is the documentation file that you need to analyze:
+<documentation>
+{doc}
+</documentation>
+"""
+    try:
+        async for message in query(prompt=prompt, options=CLAUDE_OPTIONS):
+            print(message)
+    except Exception as e:
+        print(f"Error processing {doc}: {e}")
+
+
+async def process_documentation() -> None:
+    global CLAUDE_OPTIONS
+
+    CLAUDE_OPTIONS = ClaudeCodeOptions(
+        allowed_tools=["Read", "Write"], permission_mode="acceptEdits", cwd=FOLDER
+    )
     documentation_path = os.path.join(FOLDER, DOCUMENTATION_FOLDER)
 
     if not os.path.exists(documentation_path):
@@ -19,7 +55,7 @@ def process_documentation() -> None:
     for root, _, files in os.walk(documentation_path):
         for file in files:
             file_path = os.path.join(root, file)
-            claude_agent_processor(file_path)
+            await claude_agent_processor(file_path)
 
 
 def clone_repo() -> None:
@@ -38,10 +74,10 @@ def clone_repo() -> None:
     print("repo cloned successfully")
 
 
-def main() -> None:
+async def main() -> None:
     clone_repo()
-    process_documentation()
+    await process_documentation()
 
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())
