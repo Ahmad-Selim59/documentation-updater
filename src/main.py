@@ -1,4 +1,5 @@
 import asyncio
+import datetime
 import os
 import subprocess
 from pathlib import Path
@@ -27,7 +28,7 @@ except Exception as e:
 
 
 async def claude_agent_processor(doc: str) -> None:
-    prompt = f"""{SYSTEM_PROMPT}
+    prompt += f"""{SYSTEM_PROMPT}
 
 Here is the documentation file that you need to analyze:
 <documentation>
@@ -72,6 +73,19 @@ def clone_repo() -> None:
 
     subprocess.run(["git", "clone", GITHUB_URI, FOLDER], check=True)
     print("repo cloned successfully")
+    SYSTEM_PROMPT += f"""
+Here is the codebase path where you should look for the relevant code files:
+<codebase_path>
+{FOLDER}
+</codebase_path>
+"""
+
+
+def open_pr():
+    """
+    open a pull request with the doc changes
+    """
+    now = datetime.now()
 
 
 async def main() -> None:
